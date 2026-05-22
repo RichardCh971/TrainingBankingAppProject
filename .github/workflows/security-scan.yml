@@ -22,7 +22,7 @@ jobs:
 
       - name: Scan for secrets
         run: |
-          detect-secrets scan --baseline .secrets.baseline
+          detect-secrets scan --baseline customer_api/.secrets.baseline
           detect-secrets audit .secrets.baseline
 
   dependency-scan:
@@ -79,14 +79,14 @@ jobs:
 
       - name: Upload Bandit report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: bandit-report
           path: bandit-report.json
 
       - name: Upload Semgrep report
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: semgrep-report
           path: semgrep-report.json
@@ -124,16 +124,15 @@ jobs:
         run: |
           docker build -t restapi:latest . || echo "Dockerfile not found, skipping container scan"
 
-      - name: Install Trivy
-        run: |
-          wget -qO - https://aquasecurity.github.io/trivy-repo/deb/public.key | apt-key add -
-          echo "deb https://aquasecurity.github.io/trivy-repo/deb $(lsb_release -sc) main" | tee -a /etc/apt/sources.list.d/trivy.list
-          apt-get update
-          apt-get install trivy
-
       - name: Scan image with Trivy
-        run: |
-          trivy image --severity HIGH,CRITICAL restapi:latest || true
+        uses: aquasecurity/trivy-action@master
+        with:
+            image-ref: restapi:latest
+            format: table
+            exit-code: 1
+            ignore-unfixed: true
+            vuln-type: os,library
+            severity: HIGH,CRITICAL
 
   permissions-check:
     name: Permissions & Authorization Check
